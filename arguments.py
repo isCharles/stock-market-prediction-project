@@ -1,4 +1,5 @@
 import argparse
+import sys
 from datetime import datetime
 from warnings import warn
 
@@ -151,6 +152,17 @@ def parse_args():
 
     args = parser.parse_args()
 
+    # Track which args were explicitly provided on the CLI so that "FAST-TOY"
+    # helpers don't override the user's intent (e.g. GPU-only usage).
+    argv = sys.argv[1:]
+
+    def _has_any(opts: list[str]) -> bool:
+        return any(opt in argv for opt in opts)
+
+    args._cli_device = _has_any(["-d", "--device"])
+    args._cli_epochs = _has_any(["-e", "--epochs"])
+    args._cli_ignore_timestamp = "--ignore-timestamp" in argv
+
     if args.TOY or args.FAST_TOY:
         args.ticker = "TOY"
         print(f"================================================")
@@ -181,8 +193,11 @@ def parse_args():
 
     if args.device == "cuda":
         if not torch.cuda.is_available():
-            warn("CUDA is not available. Using CPU instead.")
-            args.device = torch.device("cpu")
+            raise RuntimeError(
+                "CUDA was requested (-d cuda) but is not available.\n"
+                "Install a CUDA-enabled PyTorch build (and ensure NVIDIA drivers are installed), "
+                "then retry."
+            )
         else:
             args.device = torch.device("cuda:0")
     else:

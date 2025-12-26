@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 from pathlib import Path, PosixPath
 from typing import Any, Callable, Dict, List, Union
 from warnings import warn
@@ -58,12 +59,30 @@ class LocalLogger(Logger):
             print(f"  - {name:{self.longest_scalar_name}} : {scalar}")
 
     def log_plotly(self, figs: Dict[str, Figure], step: int):
+        disable_plots = os.getenv("STOCKPRED_DISABLE_PLOTS", "0").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        save_png = os.getenv("STOCKPRED_SAVE_PNG", "0").lower() in ("1", "true", "yes")
+
+        if disable_plots:
+            print(f"\nPlot saving disabled (STOCKPRED_DISABLE_PLOTS=1).")
+            return
+
         print(f"\nSaving figures at step {step}:")
         for name, fig in figs.items():
             name = name.replace("/", "_")
-            print(f"  - {name}_{step}.html/png")
+            print(f"  - {name}_{step}.html" + ("/png" if save_png else ""))
             fig.write_html(f"{self.run_folder}/figures/html/{name}_{step}.html")
-            fig.write_image(f"{self.run_folder}/figures/png/{name}_{step}.png")
+            if save_png:
+                try:
+                    fig.write_image(f"{self.run_folder}/figures/png/{name}_{step}.png")
+                except Exception as e:
+                    warn(
+                        f"Failed to save PNG for figure {name} at step {step}: {e}. "
+                        f"HTML was still saved. You can retry with STOCKPRED_SAVE_PNG=1 after fixing kaleido."
+                    )
 
 
 class LoggerHandler:

@@ -67,10 +67,28 @@ These are calculated for both single-day and multi-day predictions.
 
 ## Installation
 
-The project is in Python 3 and mainly uses PyTorch. Install dependencies with:
+The project is in Python 3 and mainly uses PyTorch.
+
+**Python version compatibility (important for Windows):**
+
+- Use **Python 3.11 or 3.12** (recommended).
+- **Python 3.13 is not supported** by the pinned dependency set in `requirements.txt` on Windows (notably `torch==2.4.0` and `scipy==1.14.1`), which can force `pip` to build packages like NumPy from source and fail without a full C/C++ toolchain.
+
+Install dependencies with:
 
 
 ```bash
+pip install -r requirements.txt
+```
+
+### Windows quick-start (recommended: conda)
+
+If you have conda installed, the most reliable setup on Windows is:
+
+```bash
+conda create -n stockpred python=3.12 -y
+conda activate stockpred
+python -m pip install -U pip
 pip install -r requirements.txt
 ```
 

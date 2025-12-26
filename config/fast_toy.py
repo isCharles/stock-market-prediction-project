@@ -1,7 +1,9 @@
 def overwrite_fast_toy_args(args):
-    args.device = "cpu"
+    # NOTE: Do NOT override the user's device choice. This project supports GPU-only usage.
     args.architecture = "LSTM"
-    args.epochs = 10
+    # Respect explicit CLI overrides (e.g. -e/--epochs).
+    if not getattr(args, "_cli_epochs", False):
+        args.epochs = 10
     args.batch_size = 64
     args.look_back = 5
     args.pred_horizon = 1
@@ -13,6 +15,7 @@ def overwrite_fast_toy_args(args):
     args.recurrent_pred_horizon = False
     args.eda = False
     args.wandb = False
-    args.ignore_timestamp = False
+    if not getattr(args, "_cli_ignore_timestamp", False):
+        args.ignore_timestamp = False
     args.TOY = True
     return args
