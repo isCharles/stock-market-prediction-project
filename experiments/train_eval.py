@@ -121,6 +121,7 @@ def _predict_next_day_returns(
     model: nn.Module,
     full_features: np.ndarray,
     dates: pd.DatetimeIndex,
+    prices: np.ndarray,
     *,
     look_back: int,
     pred_horizon: int,
@@ -145,6 +146,7 @@ def _predict_next_day_returns(
 
     y_true_list = []
     y_pred_list = []
+    prev_price_list = []
     date_list = []
     for i, (x, y) in enumerate(loader):
         if i < start_i:
@@ -164,8 +166,13 @@ def _predict_next_day_returns(
         date_list.append(target_date)
         y_true_list.append(true_ret)
         y_pred_list.append(pred_ret)
+        # prev price aligns with time index (look_back - 1 + i) within this window
+        prev_price_list.append(float(prices[look_back - 1 + i]))
 
-    out = pd.DataFrame({"y_true": y_true_list, "y_pred": y_pred_list}, index=pd.DatetimeIndex(date_list, name="Date"))
+    out = pd.DataFrame(
+        {"y_true": y_true_list, "y_pred": y_pred_list, "prev_price": prev_price_list},
+        index=pd.DatetimeIndex(date_list, name="Date"),
+    )
     return out
 
 
@@ -201,6 +208,10 @@ def run_time_series_cv(
     X = df[feature_cols].to_numpy(dtype=float)
     y = df[target_col].to_numpy(dtype=float)  # used only for metrics convenience
 
+    # Price series for price-MAPE reconstruction (prefer Adj Close if available, else Close)
+    price_col = "Adj Close" if "Adj Close" in df.columns else "Close"
+    prices_all = df[price_col].to_numpy(dtype=float)
+
     # CV split mirrors repo logic: include look_back overlap in "test" block
     tscv = TimeSeriesSplit(n_splits=folds, gap=-look_back, test_size=look_back + val_size)
 
@@ -211,6 +222,7 @@ def run_time_series_cv(
         X_train = X[train_idx]
         X_test = X[test_idx]  # includes look_back history + val_size evaluation tail
         dates_test = dates[test_idx]
+        prices_test = prices_all[test_idx]
 
         # Standardize Return only using train split
         ret_train = X_train[:, 0]
@@ -271,6 +283,7 @@ def run_time_series_cv(
             model,
             X_test_std,
             dates_test,
+            prices_test,
             look_back=look_back,
             pred_horizon=pred_horizon,
             standardiser=standardiser,
@@ -278,7 +291,11 @@ def run_time_series_cv(
             eval_last_n=val_size,
         )
 
-        m = compute_metrics(pred_df["y_true"].values, pred_df["y_pred"].values)
+        m = compute_metrics(
+            pred_df["y_true"].values,
+            pred_df["y_pred"].values,
+            prev_price=pred_df["prev_price"].values,
+        )
         results.append(FoldResult(fold=fold_idx, metrics=m, pred_df=pred_df, history=history))
 
     return results

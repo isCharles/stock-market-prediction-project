@@ -161,6 +161,16 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# VSCode
+.vscode/
+
+# Windows / macOS noise
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
 # Project configuration
 tmp/
 runs/
@@ -170,6 +180,43 @@ notebooks/
 old*/
 legacy/
 
+# Model artifacts / checkpoints
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# Local logs / outputs
+logs/
+*.log
+
+# LaTeX build outputs (if you keep paper sources here)
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
 # Database files
 data/database/stock_data/*
 data/database/stock_data.db
+
+# Downloaded / processed data artifacts (keep code under data/ tracked)
+data/**/processed/
+data/**/raw/
+data/**/*.csv
+data/**/*.parquet
+data/**/*.feather
+data/**/*.pkl
+data/**/*.npz
+data/**/*.npy
+data/**/*.sqlite
+data/**/*.sqlite3
+data/**/*.db

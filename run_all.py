@@ -40,7 +40,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--folds", type=int, default=5)
     p.add_argument("--lookback", type=int, default=64)
     p.add_argument("--pred-horizon", type=int, default=1)
-    p.add_argument("--val-size", type=int, default=10, help="Evaluation window per fold (next-day return points)")
+    p.add_argument(
+        "--val-size",
+        type=int,
+        default=252,
+        help="Evaluation window per fold (next-day return points). Recommended: 252 (~1 trading year).",
+    )
 
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--patience", type=int, default=5)
@@ -219,7 +224,8 @@ def main() -> None:
             oof_df.to_csv(oof_path)
 
         # Summary tables (per ticker)
-        main_metrics = ["mae", "rmse", "mape_pct", "accuracy_pct"]
+        # Note: MAPE is computed on reconstructed prices (price-MAPE), not on returns.
+        main_metrics = ["mae", "rmse", "price_mape_pct", "accuracy_pct"]
         summary_stats, main_pretty = build_results_tables(model_to_fold_metrics, main_metrics=main_metrics)
 
         # Save CSV + LaTeX
@@ -270,6 +276,19 @@ def main() -> None:
                         model_b=b,
                     )
                     sig_rows.append({"ticker": ticker, **res.as_dict()})
+
+        # Accuracy vs 50% chance: paired tests across folds against a constant baseline (50).
+        for model in model_names:
+            acc = model_to_fold_metrics[model]["accuracy_pct"].values.astype(float)
+            chance = [50.0] * len(acc)
+            res = paired_tests(
+                acc,
+                chance,
+                metric="accuracy_pct_vs_50",
+                model_a=model,
+                model_b="chance50",
+            )
+            sig_rows.append({"ticker": ticker, **res.as_dict()})
 
         sig_df = pd.DataFrame(sig_rows)
         sig_df.to_csv(paths.stats_dir / "significance.csv", index=False)
